@@ -29,7 +29,6 @@ type redisConnStatus struct {
 
 func (rcs *redisConnStatus) stateToHttp(w http.ResponseWriter, req *http.Request) {
 	rcs.mu.Lock()
-	fmt.Println(rcs.state)
 	fmt.Fprintf(w, "state: %s\n", rcs.state)
 	rcs.mu.Unlock()
 }
