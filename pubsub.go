@@ -130,8 +130,8 @@ func (rcs *redisConnStatus) daemon() {
 
 func handlePubsubMessage(msg radix.PubSubMessage) {
 	IP := string(msg.Message)
-	cmd := exec.Command("/usr/bin/doas", "/sbin/pfctl", "-t", "api_bans",
-		"-T", "add", IP)
+	cmd := exec.Command("/usr/bin/doas", "/usr/share/scripts/acacia_ban",
+		IP)
 	_, err := cmd.Output()
 	log.Println("blocking", IP)
 	if err != nil {
