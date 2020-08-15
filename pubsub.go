@@ -159,7 +159,8 @@ func (rcs *redisConnStatus) loop() {
 }
 
 func initSyslog() {
-	syslogger, err := syslog.New(syslog.LOG_INFO, "goblock_share")
+	syslogger, err := syslog.New(syslog.LOG_INFO | syslog.LOG_DAEMON,
+		"goblock_share")
 	if err != nil {
 		log.Fatal(err)
 	}
