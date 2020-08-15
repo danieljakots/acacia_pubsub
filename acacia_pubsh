@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -eu
+
+_acacia_cert=$(cat /etc/ssl/chownme.crt) \
+	_acacia_key=$(cat /etc/ssl/private/chownme.key) \
+	_acacia_ca=$(cat /etc/ssl/chownme-cacert.pem) \
+	./acacia_pubsub

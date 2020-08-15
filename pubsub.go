@@ -3,11 +3,13 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"log/syslog"
 	"net/http"
+	"os"
 	"os/exec"
 	"sync"
 	"time"
@@ -32,21 +34,60 @@ func (rcs *redisConnStatus) stateToHttp(w http.ResponseWriter, req *http.Request
 	rcs.mu.Unlock()
 }
 
-func (rcs *redisConnStatus) daemon() {
+func getTLSMaterialVars() (tls.Certificate, x509.CertPool, error) {
+	cert := []byte(os.Getenv("_acacia_cert"))
+	key := []byte(os.Getenv("_acacia_key"))
+	caCert := []byte(os.Getenv("_acacia_ca"))
+	if len(cert) == 0 || len(key) == 0 || len(caCert) == 0 {
+		return tls.Certificate{}, x509.CertPool{},
+			errors.New("Couldn't load tls material from env")
+	}
+
+	keyPair, err := tls.X509KeyPair(cert, key)
+	if err != nil {
+		return tls.Certificate{}, x509.CertPool{}, err
+	}
+
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+	return keyPair, *caCertPool, nil
+}
+
+func getTLSMaterialPaths() (tls.Certificate, x509.CertPool, error) {
 	keyPair, err := tls.LoadX509KeyPair("/etc/ssl/chownme.crt",
 		"/etc/ssl/private/chownme.key")
 	if err != nil {
-		log.Fatal(err)
+		return tls.Certificate{}, x509.CertPool{}, err
 	}
 
 	caCert, err := ioutil.ReadFile("/etc/ssl/chownme-cacert.pem")
 	if err != nil {
-		log.Fatal(err)
+		return tls.Certificate{}, x509.CertPool{}, err
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
+	return keyPair, *caCertPool, nil
+}
+
+func getTLSMaterial() (tls.Certificate, x509.CertPool) {
+	keyPair, caCertPool, err := getTLSMaterialVars()
+	// if there's an err, we ignore it and we try ..Paths()
+	if err == nil {
+		log.Println("Loading TLS keys through vars")
+		return keyPair, caCertPool
+	}
+	keyPair, caCertPool, err = getTLSMaterialPaths()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Loading TLS keys through files")
+	return keyPair, caCertPool
+}
+
+func (rcs *redisConnStatus) daemon() {
+	keyPair, caCertPool := getTLSMaterial()
 	tlsConfig := &tls.Config{Certificates: []tls.Certificate{keyPair},
-		RootCAs: caCertPool}
+		RootCAs: &caCertPool}
 	dialOpt := radix.DialUseTLS(tlsConfig)
 	conn, err := radix.Dial("tcp", "db1.chown.me:6380", dialOpt)
 	if err != nil {
