@@ -160,7 +160,7 @@ func (rcs *redisConnStatus) loop() {
 
 func initSyslog() {
 	syslogger, err := syslog.New(syslog.LOG_INFO | syslog.LOG_DAEMON,
-		"goblock_share")
+		"acacia_pubsub")
 	if err != nil {
 		log.Fatal(err)
 	}
