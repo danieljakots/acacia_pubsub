@@ -34,12 +34,8 @@ type config struct {
 	KeyPath  string
 	CaPath   string
 	Address  string
-	Actions  []action
-}
-
-type action struct {
-	Channel string
-	Command string
+	// channel: command
+	Actions map[string]string
 }
 
 func (rcs *redisConnStatus) setState(state string) {
@@ -129,8 +125,10 @@ func daemon(rcs *redisConnStatus, config *config) {
 	defer ps.Close() // this will close Conn as well
 
 	msgCh := make(chan radix.PubSubMessage)
-	if err := ps.Subscribe(msgCh, config.Actions[0].Channel); err != nil {
-		panic(err)
+	for pubsubChan, _ := range config.Actions {
+		if err := ps.Subscribe(msgCh, pubsubChan); err != nil {
+			panic(err)
+		}
 	}
 
 	errCh := make(chan error, 1)
@@ -148,15 +146,16 @@ func daemon(rcs *redisConnStatus, config *config) {
 	for {
 		select {
 		case msg := <-msgCh:
-			handlePubsubMessage(msg, config.Actions[0].Command)
+			handlePubsubMessage(msg, config.Actions)
 		case err := <-errCh:
 			panic(err)
 		}
 	}
 }
 
-func handlePubsubMessage(msg radix.PubSubMessage, cmd string) {
-	command := strings.Fields(cmd)
+func handlePubsubMessage(msg radix.PubSubMessage,
+	chanCommand map[string]string) {
+	command := strings.Fields(chanCommand[msg.Channel])
 	command = append(command, string(msg.Message))
 	e := exec.Command(command[0], command[1:]...)
 	_, err := e.Output()
