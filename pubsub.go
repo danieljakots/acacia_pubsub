@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,6 +27,19 @@ const (
 type redisConnStatus struct {
 	mu    sync.Mutex
 	state string
+}
+
+type config struct {
+	CertPath string
+	KeyPath  string
+	CaPath   string
+	Address  string
+	Actions  []action
+}
+
+type action struct {
+	Channel string
+	Command string
 }
 
 func (rcs *redisConnStatus) setState(state string) {
@@ -64,14 +79,14 @@ func getTLSMaterialVars() (tls.Certificate, x509.CertPool, error) {
 	return keyPair, *caCertPool, nil
 }
 
-func getTLSMaterialPaths() (tls.Certificate, x509.CertPool, error) {
-	keyPair, err := tls.LoadX509KeyPair("/etc/ssl/chownme.crt",
-		"/etc/ssl/private/chownme.key")
+func getTLSMaterialPaths(certPath string, keyPath string, caPath string) (
+	tls.Certificate, x509.CertPool, error) {
+	keyPair, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
 		return tls.Certificate{}, x509.CertPool{}, err
 	}
 
-	caCert, err := ioutil.ReadFile("/etc/ssl/chownme-cacert.pem")
+	caCert, err := ioutil.ReadFile(caPath)
 	if err != nil {
 		return tls.Certificate{}, x509.CertPool{}, err
 	}
@@ -80,14 +95,16 @@ func getTLSMaterialPaths() (tls.Certificate, x509.CertPool, error) {
 	return keyPair, *caCertPool, nil
 }
 
-func getTLSMaterial() (tls.Certificate, x509.CertPool) {
+func getTLSMaterial(certPath string, keyPath string, caPath string) (
+	tls.Certificate, x509.CertPool) {
 	keyPair, caCertPool, err := getTLSMaterialVars()
 	// if there's an err, we ignore it and we try ..Paths()
 	if err == nil {
 		log.Println("Loading TLS keys through vars")
 		return keyPair, caCertPool
 	}
-	keyPair, caCertPool, err = getTLSMaterialPaths()
+	keyPair, caCertPool, err = getTLSMaterialPaths(certPath, keyPath,
+		caPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -95,12 +112,13 @@ func getTLSMaterial() (tls.Certificate, x509.CertPool) {
 	return keyPair, caCertPool
 }
 
-func daemon(rcs *redisConnStatus) {
-	keyPair, caCertPool := getTLSMaterial()
+func daemon(rcs *redisConnStatus, config *config) {
+	keyPair, caCertPool := getTLSMaterial(config.CertPath, config.KeyPath,
+		config.CaPath)
 	tlsConfig := &tls.Config{Certificates: []tls.Certificate{keyPair},
 		RootCAs: &caCertPool}
 	dialOpt := radix.DialUseTLS(tlsConfig)
-	conn, err := radix.Dial("tcp", "db1.chown.me:6380", dialOpt)
+	conn, err := radix.Dial("tcp", config.Address, dialOpt)
 	if err != nil {
 		panic(err)
 	}
@@ -111,7 +129,7 @@ func daemon(rcs *redisConnStatus) {
 	defer ps.Close() // this will close Conn as well
 
 	msgCh := make(chan radix.PubSubMessage)
-	if err := ps.Subscribe(msgCh, "block"); err != nil {
+	if err := ps.Subscribe(msgCh, config.Actions[0].Channel); err != nil {
 		panic(err)
 	}
 
@@ -130,42 +148,42 @@ func daemon(rcs *redisConnStatus) {
 	for {
 		select {
 		case msg := <-msgCh:
-			handlePubsubMessage(msg)
+			handlePubsubMessage(msg, config.Actions[0].Command)
 		case err := <-errCh:
 			panic(err)
 		}
 	}
 }
 
-func handlePubsubMessage(msg radix.PubSubMessage) {
-	IP := string(msg.Message)
-	cmd := exec.Command("/usr/bin/doas", "/usr/share/scripts/acacia_ban",
-		IP)
-	_, err := cmd.Output()
-	log.Println("blocking", IP)
+func handlePubsubMessage(msg radix.PubSubMessage, cmd string) {
+	command := strings.Fields(cmd)
+	command = append(command, string(msg.Message))
+	e := exec.Command(command[0], command[1:]...)
+	_, err := e.Output()
+	log.Println(strings.Join(command, " "))
 	if err != nil {
 		panic(err)
 	}
 }
 
-func tryRecover(rcs *redisConnStatus) {
+func tryRecover(rcs *redisConnStatus, config *config) {
 	if r := recover(); r != nil {
 		log.Println("recovered from", r)
 		rcs.setState("disconnected")
 	}
 	time.Sleep(betweenReconnect)
-	loop(rcs)
+	loop(rcs, config)
 }
 
-func loop(rcs *redisConnStatus) {
+func loop(rcs *redisConnStatus, config *config) {
 	for {
-		defer tryRecover(rcs)
-		daemon(rcs)
+		defer tryRecover(rcs, config)
+		daemon(rcs, config)
 	}
 }
 
 func initSyslog() {
-	syslogger, err := syslog.New(syslog.LOG_INFO | syslog.LOG_DAEMON,
+	syslogger, err := syslog.New(syslog.LOG_INFO|syslog.LOG_DAEMON,
 		"acacia_pubsub")
 	if err != nil {
 		log.Fatal(err)
@@ -175,10 +193,25 @@ func initSyslog() {
 	log.SetFlags(0)
 }
 
+func readConfig(configPath string) *config {
+	configFile, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var config config
+	if err := json.Unmarshal(configFile, &config); err != nil {
+		log.Fatal(err)
+	}
+	return &config
+}
+
 func main() {
+	/* deal with the config file before we fiddle with syslog, so that
+	errors go to stderr rather than syslog */
+	config := readConfig("/etc/acacia.json")
 	initSyslog()
 	rcs := &redisConnStatus{}
 	http.HandleFunc("/status", rcs.stateToHttp)
 	go http.ListenAndServe(":8091", nil)
-	loop(rcs)
+	loop(rcs, config)
 }

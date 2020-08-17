@@ -1,0 +1,12 @@
+{
+    "CertPath": "",
+    "KeyPath": "",
+    "CaPath": "",
+    "Address": "redis.example.com:6379",
+    "actions": [
+        {
+            "channel": "ping",
+            "command": "/sbin/ping -c 5"
+        }
+    ]
+}
