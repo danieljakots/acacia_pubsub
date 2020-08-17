@@ -95,7 +95,7 @@ func getTLSMaterial() (tls.Certificate, x509.CertPool) {
 	return keyPair, caCertPool
 }
 
-func (rcs *redisConnStatus) daemon() {
+func daemon(rcs *redisConnStatus) {
 	keyPair, caCertPool := getTLSMaterial()
 	tlsConfig := &tls.Config{Certificates: []tls.Certificate{keyPair},
 		RootCAs: &caCertPool}
@@ -148,19 +148,19 @@ func handlePubsubMessage(msg radix.PubSubMessage) {
 	}
 }
 
-func (rcs *redisConnStatus) tryRecover() {
+func tryRecover(rcs *redisConnStatus) {
 	if r := recover(); r != nil {
 		log.Println("recovered from", r)
 		rcs.setState("disconnected")
 	}
 	time.Sleep(betweenReconnect)
-	rcs.loop()
+	loop(rcs)
 }
 
-func (rcs *redisConnStatus) loop() {
+func loop(rcs *redisConnStatus) {
 	for {
-		defer rcs.tryRecover()
-		rcs.daemon()
+		defer tryRecover(rcs)
+		daemon(rcs)
 	}
 }
 
@@ -180,5 +180,5 @@ func main() {
 	rcs := &redisConnStatus{}
 	http.HandleFunc("/status", rcs.stateToHttp)
 	go http.ListenAndServe(":8091", nil)
-	rcs.loop()
+	loop(rcs)
 }
