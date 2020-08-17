@@ -27,10 +27,22 @@ type redisConnStatus struct {
 	state string
 }
 
-func (rcs *redisConnStatus) stateToHttp(w http.ResponseWriter, req *http.Request) {
+func (rcs *redisConnStatus) setState(state string) {
 	rcs.mu.Lock()
-	fmt.Fprintf(w, "state: %s\n", rcs.state)
+	rcs.state = state
 	rcs.mu.Unlock()
+	log.Println(state)
+}
+
+func (rcs *redisConnStatus) getState() string {
+	rcs.mu.Lock()
+	state := rcs.state
+	rcs.mu.Unlock()
+	return state
+}
+
+func (rcs *redisConnStatus) stateToHttp(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprintf(w, "state: %s\n", rcs.getState())
 }
 
 func getTLSMaterialVars() (tls.Certificate, x509.CertPool, error) {
@@ -93,10 +105,7 @@ func (rcs *redisConnStatus) daemon() {
 		panic(err)
 	}
 
-	rcs.mu.Lock()
-	rcs.state = "connected"
-	rcs.mu.Unlock()
-	log.Println("Connected")
+	rcs.setState("connected")
 
 	ps := radix.PubSub(conn)
 	defer ps.Close() // this will close Conn as well
@@ -142,10 +151,7 @@ func handlePubsubMessage(msg radix.PubSubMessage) {
 func (rcs *redisConnStatus) tryRecover() {
 	if r := recover(); r != nil {
 		log.Println("recovered from", r)
-		rcs.mu.Lock()
-		rcs.state = "disconnected"
-		rcs.mu.Unlock()
-		log.Println("disconnected")
+		rcs.setState("disconnected")
 	}
 	time.Sleep(betweenReconnect)
 	rcs.loop()
