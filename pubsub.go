@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
 	"sync"
 	"time"
@@ -198,8 +199,17 @@ func readConfig(configPath string) *config {
 	return &config
 }
 
+func detectSignal() {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs)
+	sig := <-sigs
+	log.Println("received signal:", sig)
+	os.Exit(0)
+}
+
 func main() {
 	initSyslog()
+	go detectSignal()
 	config := readConfig("/etc/acacia.json")
 	rcs := &redisConnStatus{}
 	http.HandleFunc("/status", rcs.stateToHttp)
