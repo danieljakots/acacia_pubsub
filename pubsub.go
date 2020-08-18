@@ -15,6 +15,7 @@ import (
 	"os/signal"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/mediocregopher/radix/v3"
@@ -201,7 +202,7 @@ func readConfig(configPath string) *config {
 
 func detectSignal() {
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-sigs
 	log.Println("received signal:", sig)
 	os.Exit(0)
