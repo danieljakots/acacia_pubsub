@@ -108,6 +108,13 @@ func getTLSMaterial(certPath string, keyPath string, caPath string) (
 	return keyPair, caCertPool
 }
 
+func retry(rcs *redisConnStatus, config *config, err error) {
+	log.Println(err)
+	rcs.setState("disconnected")
+	time.Sleep(betweenReconnect)
+	daemon(rcs, config)
+}
+
 func daemon(rcs *redisConnStatus, config *config) {
 	keyPair, caCertPool := getTLSMaterial(config.CertPath, config.KeyPath,
 		config.CaPath)
@@ -116,7 +123,7 @@ func daemon(rcs *redisConnStatus, config *config) {
 	dialOpt := radix.DialUseTLS(tlsConfig)
 	conn, err := radix.Dial("tcp", config.Address, dialOpt)
 	if err != nil {
-		panic(err)
+		retry(rcs, config, err)
 	}
 
 	rcs.setState("connected")
@@ -127,7 +134,7 @@ func daemon(rcs *redisConnStatus, config *config) {
 	msgCh := make(chan radix.PubSubMessage)
 	for pubsubChan, _ := range config.Actions {
 		if err := ps.Subscribe(msgCh, pubsubChan); err != nil {
-			panic(err)
+			retry(rcs, config, err)
 		}
 	}
 
@@ -146,39 +153,26 @@ func daemon(rcs *redisConnStatus, config *config) {
 	for {
 		select {
 		case msg := <-msgCh:
-			handlePubsubMessage(msg, config.Actions)
+			if err := handlePubsubMessage(msg, config.Actions); err != nil {
+				retry(rcs, config, err)
+			}
 		case err := <-errCh:
-			panic(err)
+			retry(rcs, config, err)
 		}
 	}
 }
 
 func handlePubsubMessage(msg radix.PubSubMessage,
-	chanCommand map[string]string) {
+	chanCommand map[string]string) error {
 	command := strings.Fields(chanCommand[msg.Channel])
 	command = append(command, string(msg.Message))
 	e := exec.Command(command[0], command[1:]...)
 	_, err := e.Output()
 	log.Println(strings.Join(command, " "))
 	if err != nil {
-		panic(err)
+		return err
 	}
-}
-
-func tryRecover(rcs *redisConnStatus, config *config) {
-	if r := recover(); r != nil {
-		log.Println("recovered from", r)
-		rcs.setState("disconnected")
-	}
-	time.Sleep(betweenReconnect)
-	loop(rcs, config)
-}
-
-func loop(rcs *redisConnStatus, config *config) {
-	for {
-		defer tryRecover(rcs, config)
-		daemon(rcs, config)
-	}
+	return nil
 }
 
 func initSyslog() {
@@ -210,5 +204,5 @@ func main() {
 	rcs := &redisConnStatus{}
 	http.HandleFunc("/status", rcs.stateToHttp)
 	go http.ListenAndServe(":8091", nil)
-	loop(rcs, config)
+	daemon(rcs, config)
 }
