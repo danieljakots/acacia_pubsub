@@ -205,10 +205,8 @@ func readConfig(configPath string) *config {
 }
 
 func main() {
-	/* deal with the config file before we fiddle with syslog, so that
-	errors go to stderr rather than syslog */
-	config := readConfig("/etc/acacia.json")
 	initSyslog()
+	config := readConfig("/etc/acacia.json")
 	rcs := &redisConnStatus{}
 	http.HandleFunc("/status", rcs.stateToHttp)
 	go http.ListenAndServe(":8091", nil)
