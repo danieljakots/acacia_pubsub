@@ -272,7 +272,7 @@ func main() {
 	log.Println("Continuing startup under euid", os.Geteuid())
 	rcs := &redisConnStatus{}
 	http.HandleFunc("/status", rcs.stateToHttp)
-	go http.ListenAndServe(":8091", nil)
+	go http.ListenAndServe("127.0.0.1:8091", nil)
 	log.Println("status page listening on port 8091")
 	tlsConfig := getTLSMaterial(config)
 	daemon(rcs, config, tlsConfig)
