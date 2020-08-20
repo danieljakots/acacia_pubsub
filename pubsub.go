@@ -93,39 +93,36 @@ func getTLSMaterialPaths(certPath string, keyPath string, caPath string) (
 	return keyPair, *caCertPool, nil
 }
 
-func getTLSMaterial(certPath string, keyPath string, caPath string) (
-	tls.Certificate, x509.CertPool) {
+func getTLSMaterial(config *config) *tls.Config {
 	keyPair, caCertPool, err := getTLSMaterialVars()
 	// if there's an err, we ignore it and we try ..Paths()
 	if err == nil {
 		log.Println("Loading TLS keys through vars")
-		return keyPair, caCertPool
+	} else {
+		keyPair, caCertPool, err = getTLSMaterialPaths(config.CertPath,
+			config.KeyPath, config.CaPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println("Loading TLS keys through files")
 	}
-	keyPair, caCertPool, err = getTLSMaterialPaths(certPath, keyPath,
-		caPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println("Loading TLS keys through files")
-	return keyPair, caCertPool
+	tlsConfig := &tls.Config{Certificates: []tls.Certificate{keyPair},
+		RootCAs: &caCertPool}
+	return tlsConfig
 }
 
-func retry(rcs *redisConnStatus, config *config, err error) {
+func retry(rcs *redisConnStatus, config *config, tlsConfig *tls.Config, err error) {
 	log.Println(err)
 	rcs.setState("disconnected")
 	time.Sleep(betweenReconnect)
-	daemon(rcs, config)
+	daemon(rcs, config, tlsConfig)
 }
 
-func daemon(rcs *redisConnStatus, config *config) {
-	keyPair, caCertPool := getTLSMaterial(config.CertPath, config.KeyPath,
-		config.CaPath)
-	tlsConfig := &tls.Config{Certificates: []tls.Certificate{keyPair},
-		RootCAs: &caCertPool}
+func daemon(rcs *redisConnStatus, config *config, tlsConfig *tls.Config) {
 	dialOpt := radix.DialUseTLS(tlsConfig)
 	conn, err := radix.Dial("tcp", config.Address, dialOpt)
 	if err != nil {
-		retry(rcs, config, err)
+		retry(rcs, config, tlsConfig, err)
 	}
 
 	rcs.setState("connected")
@@ -136,7 +133,7 @@ func daemon(rcs *redisConnStatus, config *config) {
 	msgCh := make(chan radix.PubSubMessage)
 	for pubsubChan, _ := range config.Actions {
 		if err := ps.Subscribe(msgCh, pubsubChan); err != nil {
-			retry(rcs, config, err)
+			retry(rcs, config, tlsConfig, err)
 		}
 	}
 
@@ -156,10 +153,10 @@ func daemon(rcs *redisConnStatus, config *config) {
 		select {
 		case msg := <-msgCh:
 			if err := handlePubsubMessage(msg, config.Actions); err != nil {
-				retry(rcs, config, err)
+				retry(rcs, config, tlsConfig, err)
 			}
 		case err := <-errCh:
-			retry(rcs, config, err)
+			retry(rcs, config, tlsConfig, err)
 		}
 	}
 }
@@ -215,5 +212,6 @@ func main() {
 	rcs := &redisConnStatus{}
 	http.HandleFunc("/status", rcs.stateToHttp)
 	go http.ListenAndServe(":8091", nil)
-	daemon(rcs, config)
+	tlsConfig := getTLSMaterial(config)
+	daemon(rcs, config, tlsConfig)
 }
