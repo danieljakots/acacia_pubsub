@@ -13,6 +13,8 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"os/user"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -36,6 +38,7 @@ type config struct {
 	KeyPath  string
 	CaPath   string
 	Address  string
+	User     string
 	// channel: command
 	Actions map[string]string
 }
@@ -205,10 +208,67 @@ func detectSignal() {
 	os.Exit(0)
 }
 
+func addFileToEnv(filePath string, envVar string, env []string) []string {
+	file, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	env = append(env, fmt.Sprintf("%s=%s", envVar, file))
+	return env
+}
+
+func getUserAndGroupIds(username string) (uint32, uint32) {
+	user, err := user.Lookup(username)
+	if err != nil {
+		log.Fatal(err)
+	}
+	uid, err := strconv.ParseInt(user.Uid, 10, 32)
+	if err != nil {
+		log.Fatal(err)
+	}
+	gid, err := strconv.ParseInt(user.Gid, 10, 32)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return uint32(uid), uint32(gid)
+}
+
+func dropPriv(config *config) error {
+	/* We load the TLS material, and give it through env to a new process
+	ran under unprivileged user*/
+	uid, gid := getUserAndGroupIds(config.User)
+
+	env := make([]string, 3)
+	env = addFileToEnv(config.CertPath, "_acacia_cert", env)
+	env = addFileToEnv(config.KeyPath, "_acacia_key", env)
+	env = addFileToEnv(config.CaPath, "_acacia_ca", env)
+
+	cmd := exec.Command(os.Args[0])
+	cmd.Env = env
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Credential: &syscall.Credential{Uid: uid, Gid: gid},
+		Setsid: true,
+	}
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	log.Printf("Spawned process %d, exiting\n", cmd.Process.Pid)
+	cmd.Process.Release()
+	os.Exit(0)
+	return nil /* unreachable */
+}
+
 func main() {
 	initSyslog()
 	go detectSignal()
 	config := readConfig("/etc/acacia.json")
+	if os.Getuid() == 0 && config.User != "" {
+		// main() won't continue after dropPriv(), it will be re-exec
+		dropPriv(config)
+	}
+
 	rcs := &redisConnStatus{}
 	http.HandleFunc("/status", rcs.stateToHttp)
 	go http.ListenAndServe(":8091", nil)
