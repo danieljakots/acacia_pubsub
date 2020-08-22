@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -61,56 +60,48 @@ func (rcs *redisConnStatus) stateToHttp(w http.ResponseWriter, req *http.Request
 	fmt.Fprintf(w, "state: %s\n", rcs.getState())
 }
 
-func getTLSMaterialVars() (tls.Certificate, x509.CertPool, error) {
+func getTLSMaterialVars() ([]byte, []byte, []byte) {
 	cert := []byte(os.Getenv("_acacia_cert"))
 	key := []byte(os.Getenv("_acacia_key"))
 	caCert := []byte(os.Getenv("_acacia_ca"))
+	return cert, key, caCert
+}
+
+func getTLSMaterialPaths(certPath string, keyPath string, caPath string) (
+	[]byte, []byte, []byte) {
+	cert, err := ioutil.ReadFile(certPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	key, err := ioutil.ReadFile(keyPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	caCert, err := ioutil.ReadFile(caPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return cert, key, caCert
+}
+
+func getTLSMaterial(config *config) *tls.Config {
+	cert, key, caCert := getTLSMaterialVars()
 	if len(cert) == 0 || len(key) == 0 || len(caCert) == 0 {
-		return tls.Certificate{}, x509.CertPool{},
-			errors.New("Couldn't load tls material from env")
+		log.Println("Couldn't load tls material from env")
+		cert, key, caCert = getTLSMaterialPaths(config.CertPath,
+			config.KeyPath, config.CaPath)
 	}
 
 	keyPair, err := tls.X509KeyPair(cert, key)
 	if err != nil {
-		return tls.Certificate{}, x509.CertPool{}, err
+		log.Fatal(err)
 	}
 
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
-	return keyPair, *caCertPool, nil
-}
 
-func getTLSMaterialPaths(certPath string, keyPath string, caPath string) (
-	tls.Certificate, x509.CertPool, error) {
-	keyPair, err := tls.LoadX509KeyPair(certPath, keyPath)
-	if err != nil {
-		return tls.Certificate{}, x509.CertPool{}, err
-	}
-
-	caCert, err := ioutil.ReadFile(caPath)
-	if err != nil {
-		return tls.Certificate{}, x509.CertPool{}, err
-	}
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCert)
-	return keyPair, *caCertPool, nil
-}
-
-func getTLSMaterial(config *config) *tls.Config {
-	keyPair, caCertPool, err := getTLSMaterialVars()
-	// if there's an err, we ignore it and we try ..Paths()
-	if err == nil {
-		log.Println("Loading TLS keys through vars")
-	} else {
-		keyPair, caCertPool, err = getTLSMaterialPaths(config.CertPath,
-			config.KeyPath, config.CaPath)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Println("Loading TLS keys through files")
-	}
 	tlsConfig := &tls.Config{Certificates: []tls.Certificate{keyPair},
-		RootCAs: &caCertPool}
+		RootCAs: caCertPool}
 	return tlsConfig
 }
 
