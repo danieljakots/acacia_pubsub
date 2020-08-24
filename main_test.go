@@ -3,6 +3,8 @@ package main
 import (
 	"os"
 	"testing"
+
+	"github.com/mediocregopher/radix/v3"
 )
 
 func TestGetTLSMaterialVars(t *testing.T) {
@@ -73,5 +75,13 @@ func TestGetUserAndGroupIds(t *testing.T) {
 	if uid != 0 || gid != 0 {
 		t.Error("getUserAndGroupIds() failed")
 	}
+}
 
+func TestHandlePubsubMessage(t *testing.T) {
+	msg := radix.PubSubMessage{Channel: "foo", Message: []byte("/tmp/")}
+	chanCommand := make(map[string]string)
+	chanCommand["foo"] = "ls"
+	if err := handlePubsubMessage(msg, chanCommand) ; err != nil {
+		t.Error("handlePubsubMessage() failed")
+	}
 }
