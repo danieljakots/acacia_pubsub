@@ -33,11 +33,12 @@ type redisConnStatus struct {
 }
 
 type config struct {
-	CertPath     string
-	KeyPath      string
-	CaPath       string
-	RedisAddress string
-	User         string
+	CertPath      string
+	KeyPath       string
+	CaPath        string
+	RedisAddress  string
+	StatusAddress string
+	User          string
 	// channel: command
 	Actions map[string]string
 }
@@ -60,8 +61,8 @@ func (rcs *redisConnStatus) stateToHttp(w http.ResponseWriter, req *http.Request
 	fmt.Fprintf(w, "state: %s\n", rcs.getState())
 }
 
-func listenStatusPage() {
-	err := http.ListenAndServe("127.0.0.1:8091", nil)
+func listenStatusPage(statusAddress string) {
+	err := http.ListenAndServe(statusAddress, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -270,7 +271,7 @@ func main() {
 	log.Println("Continuing startup under euid", os.Geteuid())
 	rcs := &redisConnStatus{}
 	http.HandleFunc("/status", rcs.stateToHttp)
-	go listenStatusPage()
+	go listenStatusPage(config.StatusAddress)
 	log.Println("status page listening on port 8091")
 	tlsConfig := getTLSMaterial(config)
 	daemon(rcs, config, tlsConfig)

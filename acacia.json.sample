@@ -3,6 +3,7 @@
     "KeyPath": "",
     "CaPath": "",
     "RedisAddress": "redis.example.com:6379",
+    "StatusAddress": "localhost:8091",
     "User": "_acacia",
     "Actions": {
         "channel": "command",
