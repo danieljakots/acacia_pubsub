@@ -50,7 +50,7 @@ func (rcs *redisConnStatus) setStatus(state string) {
 	log.Println(state)
 }
 
-func (rcs *redisConnStatus) getStatus() string {
+func (rcs *redisConnStatus) status() string {
 	rcs.mu.Lock()
 	state := rcs.state
 	rcs.mu.Unlock()
@@ -58,7 +58,7 @@ func (rcs *redisConnStatus) getStatus() string {
 }
 
 func (rcs *redisConnStatus) stateToHttp(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "state: %s\n", rcs.getStatus())
+	fmt.Fprintf(w, "state: %s\n", rcs.status())
 }
 
 func listenStatusPage(statusAddress string) {
