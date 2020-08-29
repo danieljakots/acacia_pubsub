@@ -238,7 +238,7 @@ func dropPriv(config *config) error {
 	cmd.Env = env
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Credential: &syscall.Credential{Uid: uid, Gid: gid},
-		Setsid: true,
+		Setsid:     true,
 	}
 
 	if err := cmd.Start(); err != nil {
