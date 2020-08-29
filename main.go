@@ -60,6 +60,13 @@ func (rcs *redisConnStatus) stateToHttp(w http.ResponseWriter, req *http.Request
 	fmt.Fprintf(w, "state: %s\n", rcs.getState())
 }
 
+func listenStatusPage() {
+	err := http.ListenAndServe("127.0.0.1:8091", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func getTLSMaterialVars() ([]byte, []byte, []byte) {
 	cert := []byte(os.Getenv("_acacia_cert"))
 	key := []byte(os.Getenv("_acacia_key"))
@@ -263,7 +270,7 @@ func main() {
 	log.Println("Continuing startup under euid", os.Geteuid())
 	rcs := &redisConnStatus{}
 	http.HandleFunc("/status", rcs.stateToHttp)
-	go http.ListenAndServe("127.0.0.1:8091", nil)
+	go listenStatusPage()
 	log.Println("status page listening on port 8091")
 	tlsConfig := getTLSMaterial(config)
 	daemon(rcs, config, tlsConfig)
