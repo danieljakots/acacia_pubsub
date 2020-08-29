@@ -81,7 +81,7 @@ func TestHandlePubsubMessage(t *testing.T) {
 	msg := radix.PubSubMessage{Channel: "foo", Message: []byte("/tmp/")}
 	chanCommand := make(map[string]string)
 	chanCommand["foo"] = "ls"
-	if err := handlePubsubMessage(msg, chanCommand) ; err != nil {
+	if err := handlePubsubMessage(msg, chanCommand); err != nil {
 		t.Error("handlePubsubMessage() failed")
 	}
 }
