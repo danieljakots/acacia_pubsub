@@ -43,14 +43,14 @@ type config struct {
 	Actions map[string]string
 }
 
-func (rcs *redisConnStatus) setState(state string) {
+func (rcs *redisConnStatus) setStatus(state string) {
 	rcs.mu.Lock()
 	rcs.state = state
 	rcs.mu.Unlock()
 	log.Println(state)
 }
 
-func (rcs *redisConnStatus) getState() string {
+func (rcs *redisConnStatus) getStatus() string {
 	rcs.mu.Lock()
 	state := rcs.state
 	rcs.mu.Unlock()
@@ -58,7 +58,7 @@ func (rcs *redisConnStatus) getState() string {
 }
 
 func (rcs *redisConnStatus) stateToHttp(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "state: %s\n", rcs.getState())
+	fmt.Fprintf(w, "state: %s\n", rcs.getStatus())
 }
 
 func listenStatusPage(statusAddress string) {
@@ -115,7 +115,7 @@ func getTLSMaterial(config *config) *tls.Config {
 
 func retry(rcs *redisConnStatus, config *config, tlsConfig *tls.Config, err error) {
 	log.Println(err)
-	rcs.setState("disconnected")
+	rcs.setStatus("disconnected")
 	time.Sleep(betweenReconnect)
 	daemon(rcs, config, tlsConfig)
 }
@@ -127,7 +127,7 @@ func daemon(rcs *redisConnStatus, config *config, tlsConfig *tls.Config) {
 		retry(rcs, config, tlsConfig, err)
 	}
 
-	rcs.setState("connected")
+	rcs.setStatus("connected")
 
 	ps := radix.PubSub(conn)
 	defer ps.Close() // this will close Conn as well

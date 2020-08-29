@@ -33,9 +33,9 @@ func TestGetTLSMaterialVars(t *testing.T) {
 
 func TestRedisConnStatus(t *testing.T) {
 	rcs := &redisConnStatus{}
-	rcs.setState("connected")
-	if state := rcs.getState(); state != "connected" {
-		t.Error("getState() and or setState() failed")
+	rcs.setStatus("connected")
+	if state := rcs.getStatus(); state != "connected" {
+		t.Error("getStatus() and or setStatus() failed")
 	}
 }
 
