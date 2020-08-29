@@ -259,10 +259,18 @@ func dropPriv(config *config) error {
 	return nil /* unreachable */
 }
 
+func configPath() string {
+	if len(os.Args) > 1 {
+		return os.Args[1]
+	} else {
+		return "/etc/acacia.json"
+	}
+}
+
 func main() {
 	initSyslog()
 	go detectSignal()
-	config := readConfig("/etc/acacia.json")
+	config := readConfig(configPath())
 	if os.Getuid() == 0 && config.User != "" {
 		// main() won't continue after dropPriv(), it will be re-exec
 		dropPriv(config)
