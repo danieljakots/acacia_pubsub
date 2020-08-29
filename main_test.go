@@ -65,7 +65,7 @@ func TestGetTLSMaterial(t *testing.T) {
 
 func TestReadConfig(t *testing.T) {
 	conf := readConfig("acacia.json.sample")
-	if conf.Address != "redis.example.com:6379" {
+	if conf.RedisAddress != "redis.example.com:6379" {
 		t.Error("readConfig() failed")
 	}
 }

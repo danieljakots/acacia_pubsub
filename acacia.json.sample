@@ -2,7 +2,7 @@
     "CertPath": "",
     "KeyPath": "",
     "CaPath": "",
-    "Address": "redis.example.com:6379",
+    "RedisAddress": "redis.example.com:6379",
     "User": "_acacia",
     "Actions": {
         "channel": "command",

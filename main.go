@@ -33,11 +33,11 @@ type redisConnStatus struct {
 }
 
 type config struct {
-	CertPath string
-	KeyPath  string
-	CaPath   string
-	Address  string
-	User     string
+	CertPath     string
+	KeyPath      string
+	CaPath       string
+	RedisAddress string
+	User         string
 	// channel: command
 	Actions map[string]string
 }
@@ -121,7 +121,7 @@ func retry(rcs *redisConnStatus, config *config, tlsConfig *tls.Config, err erro
 
 func daemon(rcs *redisConnStatus, config *config, tlsConfig *tls.Config) {
 	dialOpt := radix.DialUseTLS(tlsConfig)
-	conn, err := radix.Dial("tcp", config.Address, dialOpt)
+	conn, err := radix.Dial("tcp", config.RedisAddress, dialOpt)
 	if err != nil {
 		retry(rcs, config, tlsConfig, err)
 	}
