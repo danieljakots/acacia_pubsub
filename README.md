@@ -18,7 +18,8 @@ Redis (for monitoring purpose).
 # Installation
 
 Compile the code and put the resulting binary somewhere™. Create an
-unprivileged user if wanted.
+unprivileged user if wanted. Under OpenBSD, this user should have
+`/sbin/nologin` as shell and `/var/empty` as home.
 
 # Configuration
 
