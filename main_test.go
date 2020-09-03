@@ -41,7 +41,10 @@ func TestRedisConnStatus(t *testing.T) {
 
 func TestAddFileToEnv(t *testing.T) {
 	env := make([]string, 1)
-	env = addFileToEnv("testdata/filetoenv", "foo", env)
+	env, err := addFileToEnv("testdata/filetoenv", "foo", env)
+	if err != nil {
+		t.Error("addFileToEnv() err failed")
+	}
 	if len(env) == 0 {
 		t.Error("addFileToEnv() len failed")
 	}
@@ -57,21 +60,30 @@ func TestGetTLSMaterial(t *testing.T) {
 	config := &config{CertPath: "testdata/client.example.com.crt",
 		KeyPath: "testdata/client.example.com.key",
 		CaPath:  "testdata/cacert.pem"}
-	tlsConfig := getTLSMaterial(config)
+	tlsConfig, err := getTLSMaterial(config)
+	if err != nil {
+		t.Error("getTLSMaterial() err failed")
+	}
 	if tlsConfig == nil {
 		t.Error("getTLSMaterial() failed")
 	}
 }
 
 func TestReadConfig(t *testing.T) {
-	conf := readConfig("acacia.json.sample")
+	conf, err := readConfig("acacia.json.sample")
+	if err != nil {
+		t.Error("readConfig() err failed")
+	}
 	if conf.RedisAddress != "redis.example.com:6379" {
 		t.Error("readConfig() failed")
 	}
 }
 
 func TestGetUserAndGroupIds(t *testing.T) {
-	uid, gid := getUserAndGroupIds("root")
+	uid, gid, err := getUserAndGroupIds("root")
+	if err != nil {
+		t.Error("getUserAndGroupIds() err failed")
+	}
 	if uid != 0 || gid != 0 {
 		t.Error("getUserAndGroupIds() failed")
 	}

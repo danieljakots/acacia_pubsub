@@ -96,33 +96,37 @@ func getTLSMaterialVars() ([]byte, []byte, []byte) {
 }
 
 func getTLSMaterialPaths(certPath string, keyPath string, caPath string) (
-	[]byte, []byte, []byte) {
+	[]byte, []byte, []byte, error) {
 	cert, err := ioutil.ReadFile(certPath)
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil, nil, err
 	}
 	key, err := ioutil.ReadFile(keyPath)
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil, nil, err
 	}
 	caCert, err := ioutil.ReadFile(caPath)
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil, nil, err
 	}
-	return cert, key, caCert
+	return cert, key, caCert, err
 }
 
-func getTLSMaterial(config *config) *tls.Config {
+func getTLSMaterial(config *config) (*tls.Config, error) {
 	cert, key, caCert := getTLSMaterialVars()
+	var err error
 	if len(cert) == 0 || len(key) == 0 || len(caCert) == 0 {
 		log.Println("Couldn't load tls material from env")
-		cert, key, caCert = getTLSMaterialPaths(config.CertPath,
+		cert, key, caCert, err = getTLSMaterialPaths(config.CertPath,
 			config.KeyPath, config.CaPath)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	keyPair, err := tls.X509KeyPair(cert, key)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	caCertPool := x509.NewCertPool()
@@ -130,7 +134,7 @@ func getTLSMaterial(config *config) *tls.Config {
 
 	tlsConfig := &tls.Config{Certificates: []tls.Certificate{keyPair},
 		RootCAs: caCertPool}
-	return tlsConfig
+	return tlsConfig, nil
 }
 
 func retry(rcs *redisConnStatus, config *config, tlsConfig *tls.Config, err error) {
@@ -196,27 +200,28 @@ func handlePubsubMessage(msg radix.PubSubMessage,
 	return nil
 }
 
-func initSyslog() {
+func initSyslog() error {
 	syslogger, err := syslog.New(syslog.LOG_INFO|syslog.LOG_DAEMON,
 		"acacia_pubsub")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	log.SetOutput(syslogger)
 	// Remove the date prefix, it's already in syslog header
 	log.SetFlags(0)
+	return nil
 }
 
-func readConfig(configPath string) *config {
+func readConfig(configPath string) (*config, error) {
 	configFile, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	var config config
 	if err := json.Unmarshal(configFile, &config); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return &config
+	return &config, nil
 }
 
 func detectSignal() {
@@ -227,40 +232,52 @@ func detectSignal() {
 	os.Exit(0)
 }
 
-func addFileToEnv(filePath string, envVar string, env []string) []string {
+func addFileToEnv(filePath string, envVar string, env []string) ([]string, error) {
 	file, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	env = append(env, fmt.Sprintf("%s=%s", envVar, file))
-	return env
+	return env, nil
 }
 
-func getUserAndGroupIds(username string) (uint32, uint32) {
+func getUserAndGroupIds(username string) (uint32, uint32, error) {
 	user, err := user.Lookup(username)
 	if err != nil {
-		log.Fatal(err)
+		return 0, 0, err
 	}
 	uid, err := strconv.ParseInt(user.Uid, 10, 32)
 	if err != nil {
-		log.Fatal(err)
+		return 0, 0, err
 	}
 	gid, err := strconv.ParseInt(user.Gid, 10, 32)
 	if err != nil {
-		log.Fatal(err)
+		return 0, 0, err
 	}
-	return uint32(uid), uint32(gid)
+	return uint32(uid), uint32(gid), nil
 }
 
 func dropPriv(config *config) error {
 	/* We load the TLS material, and give it through env to a new process
 	ran under unprivileged user*/
-	uid, gid := getUserAndGroupIds(config.User)
+	uid, gid, err := getUserAndGroupIds(config.User)
+	if err != nil {
+		return err
+	}
 
 	env := make([]string, 3)
-	env = addFileToEnv(config.CertPath, "_acacia_cert", env)
-	env = addFileToEnv(config.KeyPath, "_acacia_key", env)
-	env = addFileToEnv(config.CaPath, "_acacia_ca", env)
+	env, err = addFileToEnv(config.CertPath, "_acacia_cert", env)
+	if err != nil {
+		return err
+	}
+	env, err = addFileToEnv(config.KeyPath, "_acacia_key", env)
+	if err != nil {
+		return err
+	}
+	env, err = addFileToEnv(config.CaPath, "_acacia_ca", env)
+	if err != nil {
+		return err
+	}
 
 	cmd := exec.Command(os.Args[0])
 	cmd.Env = env
@@ -288,12 +305,21 @@ func configPath() string {
 }
 
 func main() {
-	initSyslog()
+	err := initSyslog()
+	if err != nil {
+		log.Fatal(err)
+	}
 	go detectSignal()
-	config := readConfig(configPath())
+	config, err := readConfig(configPath())
+	if err != nil {
+		log.Fatal(err)
+	}
 	if os.Getuid() == 0 && config.User != "" {
 		// main() won't continue after dropPriv(), it will be re-exec
-		dropPriv(config)
+		err := dropPriv(config)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	log.Println("Continuing startup under euid", os.Geteuid())
@@ -301,6 +327,9 @@ func main() {
 	http.HandleFunc("/status", rcs.stateToHttp)
 	go listenStatusPage(config.StatusAddress)
 	log.Println("status page listening on port 8091")
-	tlsConfig := getTLSMaterial(config)
+	tlsConfig, err := getTLSMaterial(config)
+	if err != nil {
+		log.Fatal(err)
+	}
 	daemon(rcs, config, tlsConfig)
 }
