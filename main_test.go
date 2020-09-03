@@ -41,7 +41,12 @@ func TestRedisConnStatus(t *testing.T) {
 
 func TestAddFileToEnv(t *testing.T) {
 	env := make([]string, 1)
-	env, err := addFileToEnv("testdata/filetoenv", "foo", env)
+	env, err := addFileToEnv("testdata/nonexistent", "foo", env)
+	if err == nil {
+		t.Error("addFileToEnv() nonexistent failed")
+	}
+	env = make([]string, 1)
+	env, err = addFileToEnv("testdata/filetoenv", "foo", env)
 	if err != nil {
 		t.Error("addFileToEnv() err failed")
 	}
@@ -57,10 +62,32 @@ func TestGetTLSMaterial(t *testing.T) {
 	if err := os.Unsetenv("_acacia_cert"); err != nil {
 		t.Fatal("Unsetenv failed")
 	}
+	configCertFail := &config{CertPath: "testdata/nonexistent",
+		KeyPath: "testdata/client.example.com.key",
+		CaPath:  "testdata/cacert.pem"}
+	tlsConfig, err := getTLSMaterial(configCertFail)
+	if err == nil {
+		t.Error("getTLSMaterial() CertFail failed")
+	}
+	configKeyFail := &config{CertPath: "testdata/client.example.com.crt",
+		KeyPath: "testdata/nonexistent",
+		CaPath:  "testdata/cacert.pem"}
+	tlsConfig, err = getTLSMaterial(configKeyFail)
+	if err == nil {
+		t.Error("getTLSMaterial() KeyFail failed")
+	}
+	configCaFail := &config{CertPath: "testdata/client.example.com.crt",
+		KeyPath: "testdata/client.example.com.key",
+		CaPath:  "testdata/nonexistent"}
+	tlsConfig, err = getTLSMaterial(configCaFail)
+	if err == nil {
+		t.Error("getTLSMaterial() CaFail failed")
+	}
+
 	config := &config{CertPath: "testdata/client.example.com.crt",
 		KeyPath: "testdata/client.example.com.key",
 		CaPath:  "testdata/cacert.pem"}
-	tlsConfig, err := getTLSMaterial(config)
+	tlsConfig, err = getTLSMaterial(config)
 	if err != nil {
 		t.Error("getTLSMaterial() err failed")
 	}
@@ -70,7 +97,15 @@ func TestGetTLSMaterial(t *testing.T) {
 }
 
 func TestReadConfig(t *testing.T) {
-	conf, err := readConfig("acacia.json.sample")
+	conf, err := readConfig("acacia.json.nonexistent")
+	if err == nil {
+		t.Error("readConfig() nonexistent failed")
+	}
+	conf, err = readConfig("testdata/filetoenv")
+	if err == nil {
+		t.Error("readConfig() filetoenv failed")
+	}
+	conf, err = readConfig("acacia.json.sample")
 	if err != nil {
 		t.Error("readConfig() err failed")
 	}
@@ -80,7 +115,11 @@ func TestReadConfig(t *testing.T) {
 }
 
 func TestGetUserAndGroupIds(t *testing.T) {
-	uid, gid, err := getUserAndGroupIds("root")
+	uid, gid, err := getUserAndGroupIds("nonexistentuser")
+	if err == nil {
+		t.Error("getUserAndGroupIds() nonexistentuser failed")
+	}
+	uid, gid, err = getUserAndGroupIds("root")
 	if err != nil {
 		t.Error("getUserAndGroupIds() err failed")
 	}
