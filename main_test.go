@@ -136,3 +136,17 @@ func TestHandlePubsubMessage(t *testing.T) {
 		t.Error("handlePubsubMessage() failed")
 	}
 }
+
+func TestConfigPath(t *testing.T) {
+	fakeArgs := []string{"foo"}
+	path := configPath(fakeArgs)
+	if path != "/etc/acacia.json" {
+		t.Error("configPath() without args failed")
+	}
+
+	fakeArgs = []string{"foo", "bar"}
+	path = configPath(fakeArgs)
+	if path != "bar" {
+		t.Error("configPath() with args failed")
+	}
+}

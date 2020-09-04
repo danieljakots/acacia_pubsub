@@ -296,9 +296,9 @@ func dropPriv(config *config) error {
 	return nil /* unreachable */
 }
 
-func configPath() string {
-	if len(os.Args) > 1 {
-		return os.Args[1]
+func configPath(args []string) string {
+	if len(args) > 1 {
+		return args[1]
 	} else {
 		return "/etc/acacia.json"
 	}
@@ -310,7 +310,7 @@ func main() {
 		log.Fatal(err)
 	}
 	go detectSignal()
-	config, err := readConfig(configPath())
+	config, err := readConfig(configPath(os.Args))
 	if err != nil {
 		log.Fatal(err)
 	}
