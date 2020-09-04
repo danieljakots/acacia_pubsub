@@ -259,7 +259,7 @@ func getUserAndGroupIds(username string) (uint32, uint32, error) {
 
 func dropPriv(config *config) error {
 	/* We load the TLS material, and give it through env to a new process
-	ran under unprivileged user*/
+	run under unprivileged user */
 	uid, gid, err := getUserAndGroupIds(config.User)
 	if err != nil {
 		return err
