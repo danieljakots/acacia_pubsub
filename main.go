@@ -158,6 +158,7 @@ func daemon(rcs *redisConnStatus, config *config, tlsConfig *tls.Config) {
 
 	msgCh := make(chan radix.PubSubMessage)
 	for pubsubChan, _ := range config.Actions {
+		log.Println("Listening on pubsub channel", pubsubChan)
 		if err := ps.Subscribe(msgCh, pubsubChan); err != nil {
 			retry(rcs, config, tlsConfig, err)
 		}
