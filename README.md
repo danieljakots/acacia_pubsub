@@ -1,16 +1,16 @@
 # Acacia pubsub
 
-*What if a RCE was actually a feature!*
+*What if a RCE was actually a feature*
 
 This software connects to Redis pubsub with (non-optional) mTLS and listen on
-the configured channel(s). Once there is a message it runs the associate
-command for the channel with the message as a parameter. The command(s) will be
-executed with the same user than the one configured (if no user was configured,
-then it's the same who started the program).
+the configured channel(s). Once there is a message it runs the associated
+command for the channel with the message as the argument. The command(s) will
+be executed with the same user than the one configured (if no user was
+configured, then it's the same who started the program).
 
 The program should be run as root with a configured user. This way it will
 start as root and once it has loaded the certificate/key/ca for TLS, it will
-reexec itself with the configured user.
+re-exec itself with the configured user.
 
 The program also provides a basic web page to indicates if it's connected to
 Redis (for monitoring purpose).
@@ -43,7 +43,7 @@ there is as many safeguards (read too few) as possible.
 
 ## Couldn't you find a worse file format for the configuration file than json?
 
-I wanted to keep the !stdlib dependency as minimal as possible. While stdlib
+I wanted to keep the !stdlib dependencies as few as possible. While stdlib
 also has `encoding/csv`, this was deemed unpractical.
 
 ## Do you have an OpenBSD's rc(8) script for it?
@@ -68,7 +68,7 @@ rc_cmd $1
 
 ## It doesn't work, how do I debug it?
 
-Logs go to syslog, in the daemon facility. Currently all the messages have
+Logs go to syslog, in the *daemon* facility. Currently all the messages have
 *INFO* priority.
 
 ## How can I monitor it?
