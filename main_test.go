@@ -1,6 +1,9 @@
 package main
 
 import (
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -36,6 +39,34 @@ func TestRedisConnStatus(t *testing.T) {
 	rcs.setStatus("connected")
 	if state := rcs.status(); state != "connected" {
 		t.Error("status() and or setStatus() failed")
+	}
+}
+
+func TestStateToHttp(t *testing.T) {
+	rcs := &redisConnStatus{}
+	rcs.setStatus("connected")
+
+	rec := httptest.NewRecorder()
+	req, err := http.NewRequest("GET", "/status", nil)
+	if err != nil {
+		t.Error("new request failed")
+	}
+	rcs.stateToHttp(rec, req)
+
+	result := rec.Result()
+	if result.StatusCode != http.StatusOK {
+		t.Errorf("wrong status code for stateToHttp: got %d, want %d",
+			result.StatusCode, http.StatusOK)
+	}
+
+	defer result.Body.Close()
+	body, err := ioutil.ReadAll(result.Body)
+	if err != nil {
+		t.Error("reading body failed")
+		t.Fatal(err)
+	}
+	if string(body) != "state: connected\n" {
+		t.Errorf("wrong body for stateToHttp: got %q", body)
 	}
 }
 
