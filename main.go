@@ -327,7 +327,7 @@ func main() {
 	rcs := &redisConnStatus{}
 	http.HandleFunc("/status", rcs.stateToHttp)
 	go listenStatusPage(config.StatusAddress)
-	log.Println("status page listening on port 8091")
+	log.Println("status page listening on", config.StatusAddress)
 	tlsConfig, err := getTLSMaterial(config)
 	if err != nil {
 		log.Fatal(err)
