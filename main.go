@@ -229,7 +229,7 @@ func detectSignal() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-sigs
-	log.Println("received signal:", sig)
+	log.Printf("received signal: %v, shutting down", sig)
 	os.Exit(0)
 }
 
