@@ -24,9 +24,9 @@ func TestGetTLSMaterialVars(t *testing.T) {
 		t.Fatal("Setenv failed")
 	}
 
-	cert, key, caCert := getTLSMaterialVars()
-	if len(cert) == 0 || len(key) == 0 || len(caCert) == 0 {
-		t.Error("getTLSMaterialVars() len failed")
+	cert, key, caCert, err := getTLSMaterialVars()
+	if err != nil {
+		t.Error("getTLSMaterialVars() failed")
 	}
 	if string(cert) != certShouldbe || string(key) != keyShouldbe ||
 		string(caCert) != caCertShouldbe {

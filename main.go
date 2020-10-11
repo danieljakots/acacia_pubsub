@@ -24,6 +24,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -88,11 +89,15 @@ func listenStatusPage(statusAddress string) {
 	}
 }
 
-func getTLSMaterialVars() ([]byte, []byte, []byte) {
+func getTLSMaterialVars() ([]byte, []byte, []byte, error) {
 	cert := []byte(os.Getenv("_acacia_cert"))
 	key := []byte(os.Getenv("_acacia_key"))
 	caCert := []byte(os.Getenv("_acacia_ca"))
-	return cert, key, caCert
+	var err error
+	if len(cert) == 0 || len(key) == 0 || len(caCert) == 0 {
+		err = errors.New("At least one environment variable is empty")
+	}
+	return cert, key, caCert, err
 }
 
 func getTLSMaterialPaths(certPath string, keyPath string, caPath string) (
@@ -113,9 +118,8 @@ func getTLSMaterialPaths(certPath string, keyPath string, caPath string) (
 }
 
 func getTLSMaterial(config *config) (*tls.Config, error) {
-	cert, key, caCert := getTLSMaterialVars()
-	var err error
-	if len(cert) == 0 || len(key) == 0 || len(caCert) == 0 {
+	cert, key, caCert, err := getTLSMaterialVars()
+	if err != nil {
 		log.Println("Couldn't load tls material from env")
 		cert, key, caCert, err = getTLSMaterialPaths(config.CertPath,
 			config.KeyPath, config.CaPath)
