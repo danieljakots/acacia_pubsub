@@ -2,6 +2,7 @@ package main
 
 import (
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -90,6 +91,7 @@ func TestAddFileToEnv(t *testing.T) {
 }
 
 func TestGetTLSMaterial(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	if err := os.Unsetenv("_acacia_cert"); err != nil {
 		t.Fatal("Unsetenv failed")
 	}
