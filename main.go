@@ -185,26 +185,22 @@ func daemon(rcs *redisConnStatus, config *config, tlsConfig *tls.Config) {
 	for {
 		select {
 		case msg := <-msgCh:
-			if err := handlePubsubMessage(msg, config.Actions); err != nil {
-				retry(rcs, config, tlsConfig, err)
-			}
+			handlePubsubMessage(msg, config.Actions)
 		case err := <-errCh:
 			retry(rcs, config, tlsConfig, err)
 		}
 	}
 }
 
-func handlePubsubMessage(msg radix.PubSubMessage,
-	chanCommand map[string]string) error {
+func handlePubsubMessage(msg radix.PubSubMessage, chanCommand map[string]string) {
 	command := strings.Fields(chanCommand[msg.Channel])
 	command = append(command, string(msg.Message))
 	e := exec.Command(command[0], command[1:]...)
 	_, err := e.Output()
 	log.Println("Running command:", strings.Join(command, " "))
 	if err != nil {
-		return err
+		log.Println("Running", command, "resulted in error:", err)
 	}
-	return nil
 }
 
 func initSyslog() error {

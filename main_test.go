@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -162,12 +163,21 @@ func TestGetUserAndGroupIds(t *testing.T) {
 }
 
 func TestHandlePubsubMessage(t *testing.T) {
-	msg := radix.PubSubMessage{Channel: "foo", Message: []byte("/tmp/")}
+	msg := radix.PubSubMessage{Channel: "foo", Message: []byte("/nonexistent")}
 	chanCommand := make(map[string]string)
 	chanCommand["foo"] = "ls"
-	if err := handlePubsubMessage(msg, chanCommand); err != nil {
-		t.Error("handlePubsubMessage() failed")
+	var fakeWriter bytes.Buffer
+	log.SetOutput(&fakeWriter)
+	log.SetFlags(0)
+	handlePubsubMessage(msg, chanCommand)
+	expectedError := "Running command: ls /nonexistent\n"
+	expectedError += "Running [ls /nonexistent] resulted in error: exit status 2\n"
+	result := fakeWriter.String()
+	if result != expectedError {
+		t.Errorf("handlePubsubMessage() failed: got\n%v instead of\n%v",
+			result, expectedError)
 	}
+	log.SetOutput(ioutil.Discard)
 }
 
 func TestConfigPath(t *testing.T) {
