@@ -200,7 +200,7 @@ func handlePubsubMessage(msg radix.PubSubMessage,
 	command = append(command, string(msg.Message))
 	e := exec.Command(command[0], command[1:]...)
 	_, err := e.Output()
-	log.Println(strings.Join(command, " "))
+	log.Println("Running command:", strings.Join(command, " "))
 	if err != nil {
 		return err
 	}
