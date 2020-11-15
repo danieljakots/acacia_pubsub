@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/mediocregopher/radix/v3"
@@ -191,5 +192,22 @@ func TestConfigPath(t *testing.T) {
 	path = configPath(fakeArgs)
 	if path != "bar" {
 		t.Error("configPath() with args failed")
+	}
+}
+
+func TestCreateCommandList(t *testing.T) {
+	command := "/usr/bin/doas /bin/foo"
+	args := []byte("bar baz")
+	stringList := make([]string, 4)
+	stringList[0] = "/usr/bin/doas"
+	stringList[1] = "/bin/foo"
+	stringList[2] = "bar"
+	stringList[3] = "baz"
+	result := createCommandList(command, args)
+	if len(stringList) != len(result) {
+		t.Errorf("got size %v, wanted size %v", len(result), len(stringList))
+	}
+	if !reflect.DeepEqual(result, stringList) {
+		t.Errorf("got %v, wanted %v", result, stringList)
 	}
 }

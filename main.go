@@ -192,9 +192,15 @@ func daemon(rcs *redisConnStatus, config *config, tlsConfig *tls.Config) {
 	}
 }
 
+func createCommandList(command string, message []byte) []string {
+	array := strings.Fields(command)
+	args := strings.Fields(string(message))
+	array = append(array, args...)
+	return array
+}
+
 func handlePubsubMessage(msg radix.PubSubMessage, chanCommand map[string]string) {
-	command := strings.Fields(chanCommand[msg.Channel])
-	command = append(command, string(msg.Message))
+	command := createCommandList(chanCommand[msg.Channel], msg.Message)
 	e := exec.Command(command[0], command[1:]...)
 	_, err := e.Output()
 	log.Println("Running command:", strings.Join(command, " "))
