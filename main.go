@@ -193,7 +193,7 @@ func daemon(rcs *redisConnStatus, config *config, tlsConfig *tls.Config) {
 	for {
 		select {
 		case msg := <-msgCh:
-			handlePubsubMessage(msg, config.Actions)
+			go handlePubsubMessage(msg, config.Actions)
 		case err := <-errCh:
 			retry(rcs, config, tlsConfig, err)
 		}
