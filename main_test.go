@@ -75,6 +75,31 @@ func TestStateToHttp(t *testing.T) {
 	}
 }
 
+func TestVersion(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req, err := http.NewRequest("GET", "/version", nil)
+	if err != nil {
+		t.Error("new request failed")
+	}
+	version(rec, req)
+
+	result := rec.Result()
+	if result.StatusCode != http.StatusOK {
+		t.Errorf("wrong status code for version: got %d, want %d",
+			result.StatusCode, http.StatusOK)
+	}
+
+	defer result.Body.Close()
+	body, err := ioutil.ReadAll(result.Body)
+	if err != nil {
+		t.Error("reading body failed")
+		t.Fatal(err)
+	}
+	if string(body) != "build: 1234567\n" {
+		t.Errorf("wrong body for version: got %q", body)
+	}
+}
+
 func TestAddFileToEnv(t *testing.T) {
 	env := make([]string, 1)
 	env, err := addFileToEnv("testdata/nonexistent", "foo", env)

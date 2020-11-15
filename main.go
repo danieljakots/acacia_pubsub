@@ -64,6 +64,10 @@ type config struct {
 	Actions map[string]string
 }
 
+// The linker shall replace this string
+var COMMIT = "1234567"
+
+
 func (rcs *redisConnStatus) setStatus(state string) {
 	rcs.mu.Lock()
 	rcs.state = state
@@ -82,7 +86,11 @@ func (rcs *redisConnStatus) stateToHttp(w http.ResponseWriter, req *http.Request
 	fmt.Fprintf(w, "state: %s\n", rcs.status())
 }
 
-func listenStatusPage(statusAddress string) {
+func version(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprintf(w, "build: %s\n", COMMIT)
+}
+
+func listenHttp(statusAddress string) {
 	err := http.ListenAndServe(statusAddress, nil)
 	if err != nil {
 		log.Fatal(err)
@@ -334,7 +342,8 @@ func main() {
 	log.Println("Continuing startup under euid", os.Geteuid())
 	rcs := &redisConnStatus{}
 	http.HandleFunc("/status", rcs.stateToHttp)
-	go listenStatusPage(config.StatusAddress)
+	http.HandleFunc("/version", version)
+	go listenHttp(config.StatusAddress)
 	log.Println("status page listening on", config.StatusAddress)
 	tlsConfig, err := getTLSMaterial(config)
 	if err != nil {
