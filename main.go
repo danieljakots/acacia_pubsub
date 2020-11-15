@@ -148,6 +148,17 @@ func retry(rcs *redisConnStatus, config *config, tlsConfig *tls.Config, err erro
 	daemon(rcs, config, tlsConfig)
 }
 
+func heartbeat(ps radix.PubSubConn, errCh chan<- error) {
+	ticker := time.NewTicker(betweenPing)
+	defer ticker.Stop()
+	for range ticker.C {
+		if err := ps.Ping(); err != nil {
+			errCh <- err
+			return
+		}
+	}
+}
+
 func daemon(rcs *redisConnStatus, config *config, tlsConfig *tls.Config) {
 	dialOpt := radix.DialUseTLS(tlsConfig)
 	conn, err := radix.Dial("tcp", config.RedisAddress, dialOpt)
@@ -169,16 +180,7 @@ func daemon(rcs *redisConnStatus, config *config, tlsConfig *tls.Config) {
 	}
 
 	errCh := make(chan error, 1)
-	go func() {
-		ticker := time.NewTicker(betweenPing)
-		defer ticker.Stop()
-		for range ticker.C {
-			if err := ps.Ping(); err != nil {
-				errCh <- err
-				return
-			}
-		}
-	}()
+	go heartbeat(ps, errCh)
 
 	for {
 		select {
