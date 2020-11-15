@@ -1,7 +1,7 @@
 SHELL := /usr/bin/env bash
 
 # The name of the executable (default is current directory name)
-TARGET := $(shell echo $${PWD\#\#*/})
+TARGET := $(shell echo $${PWD##*/})
 
 # go source files, ignore vendor directory
 SRC = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
