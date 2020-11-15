@@ -38,6 +38,7 @@ func TestGetTLSMaterialVars(t *testing.T) {
 }
 
 func TestRedisConnStatus(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	rcs := &redisConnStatus{}
 	rcs.setStatus("connected")
 	if state := rcs.status(); state != "connected" {
@@ -46,6 +47,7 @@ func TestRedisConnStatus(t *testing.T) {
 }
 
 func TestStateToHttp(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	rcs := &redisConnStatus{}
 	rcs.setStatus("connected")
 
