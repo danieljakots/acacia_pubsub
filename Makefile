@@ -7,7 +7,8 @@ TARGET := $(shell echo $${PWD##*/})
 SRC = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 COMMIT := $(shell git rev-parse --short HEAD)
-LDFLAGS=-ldflags "-X=main.COMMIT=$(COMMIT)"
+TODAY := $(shell date +%Y-%m-%d)
+LDFLAGS=-ldflags "-X main.COMMIT=$(COMMIT) -X main.DATE=$(TODAY)"
 
 # looks like abuse
 .PHONY: all build obsdbuild clean fmt simplify test testcov testcovweb

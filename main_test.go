@@ -95,7 +95,7 @@ func TestVersion(t *testing.T) {
 		t.Error("reading body failed")
 		t.Fatal(err)
 	}
-	if string(body) != "build: 1234567\n" {
+	if string(body) != "build: 1234567, date: 1970-01-01\n" {
 		t.Errorf("wrong body for version: got %q", body)
 	}
 }

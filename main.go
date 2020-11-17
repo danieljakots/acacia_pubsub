@@ -65,8 +65,10 @@ type config struct {
 }
 
 // The linker shall replace this string
-var COMMIT = "1234567"
-
+var (
+	COMMIT = "1234567"
+	DATE   = "1970-01-01"
+)
 
 func (rcs *redisConnStatus) setStatus(state string) {
 	rcs.mu.Lock()
@@ -87,7 +89,7 @@ func (rcs *redisConnStatus) stateToHttp(w http.ResponseWriter, req *http.Request
 }
 
 func version(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "build: %s\n", COMMIT)
+	fmt.Fprintf(w, "build: %s, date: %s\n", COMMIT, DATE)
 }
 
 func listenHttp(statusAddress string) {
