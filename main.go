@@ -64,7 +64,7 @@ type config struct {
 	Actions map[string]string
 }
 
-// The linker shall replace this string
+// The linker shall replace these strings
 var (
 	COMMIT = "1234567"
 	DATE   = "1970-01-01"
