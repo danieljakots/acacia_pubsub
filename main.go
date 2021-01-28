@@ -60,7 +60,7 @@ type config struct {
 	RedisAddress  string
 	StatusAddress string
 	User          string
-	// channel: command
+	// Pubsub Channel: Command
 	Actions map[string]string
 }
 
