@@ -328,6 +328,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Printf("Starting. Build: %s, date: %s\n", COMMIT, DATE)
 	go detectSignal()
 	config, err := readConfig(configPath(os.Args))
 	if err != nil {
