@@ -13,7 +13,7 @@ LDFLAGS=-ldflags "-X main.COMMIT=${COMMIT} -X main.DATE=${TODAY}"
 # looks like abuse
 .PHONY: all build obsdbuild clean fmt simplify test testcov testcovweb
 
-all: build test
+all: fmt build test
 
 build:
 	go build ${LDFLAGS}

@@ -148,7 +148,7 @@ func getTLSMaterial(config *config) (*tls.Config, error) {
 
 	tlsConfig := &tls.Config{Certificates: []tls.Certificate{keyPair},
 		MinVersion: tls.VersionTLS12,
-		RootCAs: caCertPool}
+		RootCAs:    caCertPool}
 	return tlsConfig, nil
 }
 
