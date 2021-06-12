@@ -311,7 +311,10 @@ func dropPriv(config *Config) error {
 	}
 
 	log.Printf("Spawned process %d, exiting\n", cmd.Process.Pid)
-	cmd.Process.Release()
+	err = cmd.Process.Release()
+	if err != nil {
+		log.Println(err)
+	}
 	os.Exit(0)
 	return nil /* unreachable */
 }
