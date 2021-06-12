@@ -337,7 +337,7 @@ func main() {
 	}
 	if os.Getuid() == 0 && config.User != "" {
 		// main() won't continue after dropPriv(), it will be re-exec
-		err := dropPriv(config)
+		err = dropPriv(config)
 		if err != nil {
 			log.Fatal(err)
 		}
