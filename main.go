@@ -285,7 +285,7 @@ func dropPriv(config *Config) error {
 		return err
 	}
 
-	env := make([]string, 3)
+	env := make([]string, 0)
 	env, err = addFileToEnv(config.CertPath, "_acacia_cert", env)
 	if err != nil {
 		return err
