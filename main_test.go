@@ -124,21 +124,21 @@ func TestGetTLSMaterial(t *testing.T) {
 	if err := os.Unsetenv("_acacia_cert"); err != nil {
 		t.Fatal("Unsetenv failed")
 	}
-	configCertFail := &config{CertPath: "testdata/nonexistent",
+	configCertFail := &Config{CertPath: "testdata/nonexistent",
 		KeyPath: "testdata/client.example.com.key",
 		CaPath:  "testdata/cacert.pem"}
 	tlsConfig, err := getTLSMaterial(configCertFail)
 	if err == nil {
 		t.Error("getTLSMaterial() CertFail failed")
 	}
-	configKeyFail := &config{CertPath: "testdata/client.example.com.crt",
+	configKeyFail := &Config{CertPath: "testdata/client.example.com.crt",
 		KeyPath: "testdata/nonexistent",
 		CaPath:  "testdata/cacert.pem"}
 	tlsConfig, err = getTLSMaterial(configKeyFail)
 	if err == nil {
 		t.Error("getTLSMaterial() KeyFail failed")
 	}
-	configCaFail := &config{CertPath: "testdata/client.example.com.crt",
+	configCaFail := &Config{CertPath: "testdata/client.example.com.crt",
 		KeyPath: "testdata/client.example.com.key",
 		CaPath:  "testdata/nonexistent"}
 	tlsConfig, err = getTLSMaterial(configCaFail)
@@ -146,7 +146,7 @@ func TestGetTLSMaterial(t *testing.T) {
 		t.Error("getTLSMaterial() CaFail failed")
 	}
 
-	config := &config{CertPath: "testdata/client.example.com.crt",
+	config := &Config{CertPath: "testdata/client.example.com.crt",
 		KeyPath: "testdata/client.example.com.key",
 		CaPath:  "testdata/cacert.pem"}
 	tlsConfig, err = getTLSMaterial(config)

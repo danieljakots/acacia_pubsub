@@ -53,7 +53,7 @@ type redisConnStatus struct {
 	state string
 }
 
-type config struct {
+type Config struct {
 	CertPath      string
 	KeyPath       string
 	CaPath        string
@@ -127,7 +127,7 @@ func getTLSMaterialPaths(certPath string, keyPath string, caPath string) (
 	return cert, key, caCert, err
 }
 
-func getTLSMaterial(config *config) (*tls.Config, error) {
+func getTLSMaterial(config *Config) (*tls.Config, error) {
 	cert, key, caCert, err := getTLSMaterialVars()
 	if err != nil {
 		log.Println("Couldn't load tls material from env")
@@ -152,7 +152,7 @@ func getTLSMaterial(config *config) (*tls.Config, error) {
 	return tlsConfig, nil
 }
 
-func retry(rcs *redisConnStatus, config *config, tlsConfig *tls.Config, err error) {
+func retry(rcs *redisConnStatus, config *Config, tlsConfig *tls.Config, err error) {
 	log.Println(err)
 	rcs.setStatus("disconnected")
 	time.Sleep(betweenReconnect)
@@ -170,7 +170,7 @@ func heartbeat(ps radix.PubSubConn, errCh chan<- error) {
 	}
 }
 
-func daemon(rcs *redisConnStatus, config *config, tlsConfig *tls.Config) {
+func daemon(rcs *redisConnStatus, config *Config, tlsConfig *tls.Config) {
 	dialOpt := radix.DialUseTLS(tlsConfig)
 	conn, err := radix.Dial("tcp", config.RedisAddress, dialOpt)
 	if err != nil {
@@ -232,12 +232,12 @@ func initSyslog() error {
 	return nil
 }
 
-func readConfig(configPath string) (*config, error) {
+func readConfig(configPath string) (*Config, error) {
 	configFile, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		return nil, err
 	}
-	var config config
+	var config Config
 	if err := json.Unmarshal(configFile, &config); err != nil {
 		return nil, err
 	}
@@ -277,7 +277,7 @@ func getUserAndGroupIds(username string) (uint32, uint32, error) {
 	return uint32(uid), uint32(gid), nil
 }
 
-func dropPriv(config *config) error {
+func dropPriv(config *Config) error {
 	/* We load the TLS material, and give it through env to a new process
 	run under unprivileged user */
 	uid, gid, err := getUserAndGroupIds(config.User)
