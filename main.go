@@ -306,7 +306,7 @@ func dropPriv(config *Config) error {
 		Setsid:     true,
 	}
 
-	if err := cmd.Start(); err != nil {
+	if err = cmd.Start(); err != nil {
 		return err
 	}
 
