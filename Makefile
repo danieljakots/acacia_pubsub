@@ -13,7 +13,7 @@ LDFLAGS=-ldflags "-X main.COMMIT=${COMMIT} -X main.DATE=${TODAY}"
 # looks like abuse
 .PHONY: all build obsdbuild clean fmt simplify test testcov testcovweb
 
-all: fmt build test
+all: fmt build test lint
 
 build:
 	go build ${LDFLAGS}
@@ -43,3 +43,7 @@ testcovweb:
 	go test -coverprofile=coverage.out
 	go tool cover -html=coverage.out
 	rm -f coverage.out
+
+lint:
+	golangci-lint run
+	shadow ./...
